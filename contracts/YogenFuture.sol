@@ -26,11 +26,13 @@ contract YogenFuture is ERC721, Ownable {
     address to,
     uint256 futureId,
     bool isInitiator
-  ) external onlyYogenExchange() {
+  ) external onlyYogenExchange() returns (uint256) {
     _mint(to, currentTokenId);
     tokenToFuture[currentTokenId] = futureId;
     isInitiatorToken[currentTokenId] = isInitiator;
     currentTokenId += 1;
+
+    return currentTokenId - 1;
   }
 
   function burn(

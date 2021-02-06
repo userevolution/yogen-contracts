@@ -4,17 +4,12 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./YogenFuture.sol";
 
 
 contract YogenExchange {
-  string public constant name = "YogenExchange";
-  string public constant version = "0";
-  bytes32 public DOMAIN_SEPARATOR;
-
-  bytes32 public constant SWAP_TYPEHASH = keccak256("swap(uint256 amountIn,address tokenIn,uint256 amountOut,address tokenOut,uint256 maxCost,uint256 nonce");
-
   enum FutureType { CALL, PUT }
   enum FutureStyle { EU, US }
 
@@ -32,6 +27,12 @@ contract YogenExchange {
     FutureStyle futureStyle;
     bool isExecuted;
   }
+
+  string public constant name = "YogenExchange";
+  string public constant version = "0";
+  bytes32 public DOMAIN_SEPARATOR;
+
+  bytes32 public constant CREATE_TYPEHASH = keccak256("create()");
 
   Future[] public futures;
 
@@ -69,17 +70,44 @@ contract YogenExchange {
   }
 
   function create(
-    Future memory future,
+    address initiator,
+    address underlyingAsset,
+    uint256 underlyingAssetQty,
+    address currency,
+    uint256 currencyQty,
+    uint256 targetDate,
+    FutureType futureType,
+    FutureStyle futureStyle,
     bytes memory initiatorSig
-  ) external {
-    require(isSigBurnt[initiatorSig] == false, "ERR_SIG_BURNT");
+  ) external nonReentrant() {
+    require(isSigBurnt[initiatorSig] == false, "SIG_BURNT");
 
-    // TODO: Check the sig
+    bytes memory data = abi.encode(
+      CREATE_TYPEHASH,
+      initiator,
+      underlyingAsset,
+      underlyingAssetQty,
+      currency,
+      currencyQty,
+      targetDate,
+      futureType,
+      futureStyle
+    );
 
-    futures.push(future);
+    require(_recover(DOMAIN_SEPARATOR, sig, data), "INVALID_SIG");
 
-    yogenFuture.mint(future.initiator, future.length - 1, true);
-    yogenFuture.mint(future.counterparty, future.length - 1, false);
+    uint256 initiatorNFTId = yogenFuture.mint(future.initiator, future.length - 1, true);
+    uint256 counterpartyNFTId = yogenFuture.mint(future.counterparty, future.length - 1, false);
+
+    require(
+      IERC20(underlyingAsset).transferFrom(initiator, address(this), underlyingAssetQty),
+      "UNDERLYING_ASSET_TRANSFER_FAILED"
+    );
+
+    require(
+      IERC20(currency).transferFrom(msg.sender, address(this), currencyQty),
+      "UNDERLYING_ASSET_TRANSFER_FAILED"
+    );
   }
 
   function swap(
