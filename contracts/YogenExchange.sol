@@ -9,15 +9,13 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./YogenFuture.sol";
 
 
-contract YogenExchange {
+contract YogenExchange is ReentrancyGuard {
   struct Future {
-    address initiator;
     uint256 initiatorNFTId;
     address tokenIn;
     uint256 amountIn;
     address tokenOut;
     uint256 amountOut;
-    address counterparty;
     uint256 counterpartyNFTId;
     uint256 deliveryDate;
     bool isExecuted;
@@ -53,13 +51,14 @@ contract YogenExchange {
 
   constructor(
     address yogenFutureAddress,
-    uint256 executorFee,
+    uint256 initialExecutorFee,
     uint256 initialFee,
     address initialFeeCollector
   ) {
     yogenFuture = YogenFuture(yogenFutureAddress);
     currentFee = initialFee;
     feeCollector = initialFeeCollector;
+    executorFee = initialExecutorFee;
 
     uint256 chainId;
 
@@ -102,10 +101,10 @@ contract YogenExchange {
       expirationDate
     );
 
-    require(_recover(DOMAIN_SEPARATOR, sig, data), "INVALID_SIG");
+    require(_recover(DOMAIN_SEPARATOR, initiatorSig, data) == initiator, "INVALID_SIG");
 
-    uint256 initiatorNFTId = yogenFuture.mint(future.initiator, future.length - 1, true);
-    uint256 counterpartyNFTId = yogenFuture.mint(future.counterparty, future.length - 1, false);
+    uint256 initiatorNFTId = yogenFuture.mint(initiator, futures.length - 1, true);
+    uint256 counterpartyNFTId = yogenFuture.mint(msg.sender, futures.length - 1, false);
 
     require(
       IERC20(tokenIn).transferFrom(initiator, address(this), amountIn),
@@ -119,13 +118,11 @@ contract YogenExchange {
 
     futures.push(
       Future({
-        initiator: initiator,
         initiatorNFTId: initiatorNFTId,
         tokenIn: tokenIn,
         amountIn: amountIn,
         tokenOut: tokenOut,
         amountOut: amountOut,
-        counterparty: msg.sender,
         counterpartyNFTId: counterpartyNFTId,
         deliveryDate: deliveryDate,
         isExecuted: false
@@ -137,25 +134,24 @@ contract YogenExchange {
 
   function execute(
     uint256 futureId
-  ) external {
-    address initiator = YogenFuture(yogenFuture).ownerOf(futures[futureid].initiatorNFTId);
-    require(msg.sender == initiator, "NOT_INITIATOR");
+  ) external nonReentrant() {
+    require(futures[futureId].isExecuted == false, "SWAP_ALREADY_EXECUTED");
+    address initiator = YogenFuture(yogenFuture).ownerOf(futures[futureId].initiatorNFTId);
+    address counterparty = YogenFuture(yogenFuture).ownerOf(futures[futureId].counterpartyNFTId);
 
-    if (futures[futureId].futureStyle == FutureStyle.BEFORE) {
+    YogenFuture(yogenFuture).burn(futures[futureId].initiatorNFTId);
+    YogenFuture(yogenFuture).burn(futures[futureId].counterpartyNFTId);
 
-    }
-
-    YogenFuture(yogenFuture).burn(futures[futureid].initiatorNFTId);
-    YogenFuture(yogenFuture).burn(futures[futureid].counterpartyNFTId);
+    emit FutureExecuted(futureId, initiator, counterparty, msg.sender);
 
     require(
-      IERC20(underlyingAsset).transferFrom(initiator, address(this), underlyingAssetQty),
-      "UNDERLYING_ASSET_TRANSFER_FAILED"
+      IERC20(futures[futureId].tokenIn).transferFrom(address(this), counterparty, futures[futureId].amountIn),
+      "TOKEN_IN_TRANSFER_FAILED"
     );
 
     require(
-      IERC20(currency).transferFrom(msg.sender, address(this), currencyQty),
-      "CURRENCY_TRANSFER_FAILED"
+      IERC20(futures[futureId].tokenOut).transferFrom(address(this), initiator, futures[futureId].amountOut),
+      "TOKEN_OUT_TRANSFER_FAILED"
     );
   }
 
