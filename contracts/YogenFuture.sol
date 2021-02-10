@@ -12,13 +12,20 @@ contract YogenFuture is ERC721, Ownable {
   mapping (uint256 => uint256) public tokenToFuture;
   mapping (uint256 => bool) public isInitiatorToken;
 
+  event TokenMinted(
+    uint256 tokenId,
+    address indexed owner,
+    uint256 futureId,
+    bool isInitiatorToken
+  );
+
   constructor() ERC721(
     "YogenFuture",
     "YOGNF"
   ) {}
 
   modifier onlyYogenExchange() {
-    require(isYogenExchange[msg.sender], "ERR_NOT_YOGEN_EXCHANGE");
+    require(isYogenExchange[msg.sender], "NOT_YOGEN_EXCHANGE");
     _;
   }
 
@@ -31,6 +38,8 @@ contract YogenFuture is ERC721, Ownable {
     tokenToFuture[currentTokenId] = futureId;
     isInitiatorToken[currentTokenId] = isInitiator;
     currentTokenId += 1;
+
+    emit TokenMinted(currentTokenId, to, futureId, isInitiator);
 
     return currentTokenId - 1;
   }
