@@ -135,7 +135,7 @@ contract YogenExchange is ReentrancyGuard {
   function execute(
     uint256 futureId
   ) external nonReentrant() {
-    require(futures[futureId].isExecuted == false, "SWAP_ALREADY_EXECUTED");
+    require(futures[futureId].isExecuted == false, "ALREADY_EXECUTED");
     address initiator = YogenFuture(yogenFuture).ownerOf(futures[futureId].initiatorNFTId);
     address counterparty = YogenFuture(yogenFuture).ownerOf(futures[futureId].counterpartyNFTId);
 
