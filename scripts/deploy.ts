@@ -1,8 +1,6 @@
 import hre from 'hardhat';
 import '@nomiclabs/hardhat-ethers';
 
-import deploymentArguments from '../deploymentArguments';
-
 const { ethers } = hre;
 
 async function main() {
@@ -10,10 +8,16 @@ async function main() {
 
   console.log('Deploying contract(s) with account:', deployer.address);
 
-  const Nucter = await ethers.getContractFactory('Nucter');
-  const nucter = await Nucter.deploy(...deploymentArguments);
+  const YogenFuture = await ethers.getContractFactory('YogenFuture');
+  const yogenFuture = await YogenFuture.deploy();
 
-  console.log('Nucter deployed:', nucter.address);
+  console.log('YogenFuture deployed:', yogenFuture.address);
+
+  const YogenExchange = await ethers.getContractFactory('YogenExchange');
+  const yogenExchange = await YogenExchange.deploy(yogenFuture.address, 0, 0, deployer.address);
+  await yogenFuture.updateYogenExchange(yogenExchange.address, true);
+
+  console.log('YogenExchange deployed:', yogenExchange.address);
 }
 
 main()

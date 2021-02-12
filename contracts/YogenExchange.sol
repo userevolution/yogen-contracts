@@ -22,10 +22,10 @@ contract YogenExchange is ReentrancyGuard {
   }
 
   string public constant name = "YogenExchange";
-  string public constant version = "0";
+  string public constant version = "1";
   bytes32 public DOMAIN_SEPARATOR;
 
-  bytes32 public constant CREATE_TYPEHASH = keccak256("create()");
+  bytes32 public constant CREATE_TYPEHASH = keccak256("create(address initiator,address tokenIn,uint256 amountIn,address tokenOut,uint256 amountOut,uint256 deliveryDate,uint256 expiryDate");
 
   YogenFuture public yogenFuture;
   uint256 public executorFee;
@@ -85,7 +85,7 @@ contract YogenExchange is ReentrancyGuard {
     address tokenOut,
     uint256 amountOut,
     uint256 deliveryDate,
-    uint256 expirationDate,
+    uint256 expiryDate,
     bytes memory initiatorSig
   ) external nonReentrant() {
     require(isSigBurnt[initiatorSig] == false, "SIG_BURNT");
@@ -98,7 +98,7 @@ contract YogenExchange is ReentrancyGuard {
       tokenOut,
       amountOut,
       deliveryDate,
-      expirationDate
+      expiryDate
     );
 
     require(_recover(DOMAIN_SEPARATOR, initiatorSig, data) == initiator, "INVALID_SIG");
