@@ -28,6 +28,10 @@ const config: HardhatUserConfig = {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${RINKEBY_ALCHEMY_KEY}`,
       accounts: [PRIVATE_KEY],
     },
+    arbitrum: {
+      url: 'https://kovan3.arbitrum.io/rpc',
+      accounts: [PRIVATE_KEY],
+    },
   },
   etherscan: {
     apiKey: ETHERSCAN_KEY,

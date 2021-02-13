@@ -23,7 +23,7 @@ import {
 const { ethers } = hre;
 
 async function signCreate(
-  signer: Signer,
+  signer: Wallet,
   verifyingContract: string,
   initiator: string,
   tokenIn: string,
@@ -83,7 +83,7 @@ async function signCreate(
   return sig;
 }
 
-describe('Pawnda', () => {
+describe('YogenExchange', () => {
   let accounts: Signer[];
 
   let deployer: Signer;
@@ -124,11 +124,12 @@ describe('Pawnda', () => {
     const deliveryDate = (Math.floor(Date.now() / 1000) + delay * 2).toString();
     const expiryDate = (Math.floor(Date.now() / 1000) + delay).toString();
 
-    const aliceWallet = alice as Wallet;
+    const random = Wallet.createRandom();
+
     const sig = await signCreate(
-      ethers.provider.getSigner(1),
+      random,
       yogenExchange.address,
-      await alice.getAddress(),
+      await random.getAddress(),
       tokenIn.address,
       utils.parseEther('1'),
       tokenOut.address,
@@ -137,12 +138,12 @@ describe('Pawnda', () => {
       expiryDate,
     );
 
-    await tokenIn.mint(await alice.getAddress(), utils.parseEther('1'));
+    await tokenIn.mint(await random.getAddress(), utils.parseEther('1'));
     await tokenOut.mint(await bob.getAddress(), utils.parseEther('1'));
 
     await expect(
       yogenExchange.create(
-        await alice.getAddress(),
+        await random.getAddress(),
         tokenIn.address,
         utils.parseEther('1'),
         tokenOut.address,
@@ -154,7 +155,7 @@ describe('Pawnda', () => {
     ).to.emit(yogenExchange, 'FutureCreated').withArgs(
       [
         '0',
-        await alice.getAddress(),
+        await random.getAddress(),
         await bob.getAddress(),
       ],
     );
